@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocina - Mia's Sugar</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #fce4ec; margin: 0; padding: 20px; }
+        h1 { color: #ad1457; text-align: center; text-transform: uppercase; }
+        .grid-cocina { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .tarjeta-mesa { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-left: 8px solid #ad1457; }
+        .mesa-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #fce4ec; padding-bottom: 10px; margin-bottom: 10px; }
+        .mesa-numero { font-size: 1.5em; font-weight: bold; color: #ad1457; }
+        .total-acumulado { font-size: 1.2em; font-weight: bold; color: #4caf50; }
+        .lista-productos { margin: 10px 0; padding-left: 20px; font-size: 0.95em; }
+        .producto-item { margin-bottom: 5px; color: #333; }
+        .notas-acumuladas { background: #fff9c4; padding: 10px; border-radius: 8px; font-size: 0.85em; margin-top: 10px; border: 1px dashed #fbc02d; }
+        .btn-cobrar { background-color: #ad1457; color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .btn-cobrar:hover { background-color: #880e4f; }
+        .vacio { text-align: center; color: #888; margin-top: 50px; }
+    </style>
+</head>
+<body>
+
+    <h1>👨‍🍳 Panel de Cocina y Caja</h1>
+    <div id="contenedor-mesas" class="grid-cocina">
+        <p class="vacio">Esperando pedidos...</p>
+    </div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Escuchar cambios en la base de datos
+    db.ref('pedidos').on('value', (snapshot) => {
+        const datos = snapshot.val();
+        const contenedor = document.getElementById('contenedor-mesas');
+        contenedor.innerHTML = "";
+
+        if (!datos) {
+            contenedor.innerHTML = '<p class="vacio">No hay mesas activas.</p>';
+            return;
+        }
+
+        // 1. AGRUPAR PEDIDOS POR MESA
+        const mesasActivas = {};
+
+        Object.keys(datos).forEach(id => {
+            const p = datos[id];
+            // Solo procesamos pedidos que NO han sido cobrados/finalizados
+            if (p.estado !== "Cobrado") {
+                if (!mesasActivas[p.ubicacion]) {
+                    mesasActivas[p.ubicacion] = {
+                        productos: [],
+                        total: 0,
+                        notas: [],
+                        ids: [] // Guardamos los IDs para poder borrarlos luego
+                    };
+                }
+                
+                // Sumar productos
+                mesasActivas[p.ubicacion].productos.push(...p.productos);
+                // Sumar precios (convertir a número por si acaso)
+                mesasActivas[p.ubicacion].total += parseFloat(p.total);
+                // Acumular notas si existen
+                if (p.detalles) mesasActivas[p.ubicacion].notas.push(p.detalles);
+                // Guardar ID del pedido
+                mesasActivas[p.ubicacion].ids.push(id);
+            }
+        });
+
+        // 2. RENDERIZAR TARJETAS POR MESA
+        Object.keys(mesasActivas).forEach(nombreMesa => {
+            const mesa = mesasActivas[nombreMesa];
+            
+            const div = document.createElement('div');
+            div.className = 'tarjeta-mesa';
+            
+            let htmlProductos = "";
+            mesa.productos.forEach(prod => {
+                htmlProductos += `<li class="producto-item">${prod}</li>`;
+            });
+
+            let htmlNotas = mesa.notas.length > 0 ? 
+                `<div class="notas-acumuladas"><strong>Notas:</strong><br>${mesa.notas.join(' / ')}</div>` : "";
+
+            div.innerHTML = `
+                <div class="mesa-header">
+                    <span class="mesa-numero">${nombreMesa}</span>
+                    <span class="total-acumulado">${mesa.total.toFixed(2)}€</span>
+                </div>
+                <ul class="lista-productos">
+                    ${htmlProductos}
+                </ul>
+                ${htmlNotas}
+                <button class="btn-cobrar" onclick="finalizarMesa('${nombreMesa}', ${JSON.stringify(mesa.ids)})">
+                    💰 COBRAR Y FINALIZAR
+                </button>
+            `;
+            contenedor.appendChild(div);
+        });
+    });
+
+    // Función para limpiar la mesa cuando paguen
+    function finalizarMesa(nombreMesa, ids) {
+        if (confirm(`¿Finalizar y cobrar la ${nombreMesa}?`)) {
+            const actualizaciones = {};
+            ids.forEach(id => {
+                actualizaciones[`/pedidos/${id}/estado`] = "Cobrado";
+            });
+            
+            db.ref().update(actualizaciones).then(() => {
+                alert(nombreMesa + " finalizada.");
+            });
+        }
+    }
+</script>
+</body>
+</html>
