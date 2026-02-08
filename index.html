@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mia's Sugar - Carta Digital Completa</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #fce4ec; margin: 0; padding: 0; color: #333; padding-bottom: 180px; }
+        header { background-color: #ad1457; color: white; text-align: center; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .seccion { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h2 { color: #ad1457; border-bottom: 2px solid #f8bbd0; padding-bottom: 5px; font-size: 1.3em; margin-top: 10px; text-transform: uppercase; }
+        .producto { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dotted #ddd; }
+        .info { flex-grow: 1; padding-right: 10px; }
+        .nombre { font-weight: bold; display: block; }
+        .sub { font-size: 0.85em; color: #666; font-style: italic; }
+        .precio { color: #ad1457; font-weight: bold; white-space: nowrap; }
+        .btn-add { background-color: #ad1457; color: white; border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 1.2em; flex-shrink: 0; }
+        .grid-mesas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .btn-mesa { padding: 15px 5px; border-radius: 10px; background: white; border: 1px solid #ddd; font-weight: bold; cursor: pointer; }
+        .btn-lugar { width: 100%; padding: 20px; margin: 10px 0; border-radius: 15px; border: none; font-size: 1.1em; font-weight: bold; cursor: pointer; }
+        .cesta { background: #fff; padding: 15px; border-top: 5px solid #ad1457; position: fixed; bottom: 0; width: 100%; max-width: 600px; box-sizing: border-box; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); z-index: 1000; }
+        .btn-pedir { background-color: #4caf50; color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1.1em; }
+        .oculto { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1 style="margin:0;">Mia's Sugar</h1>
+    <p style="margin:5px 0 0 0;">Bakery & Coffee</p>
+</header>
+
+<div class="container">
+    <div id="paso-lugar" class="seccion" style="text-align: center;">
+        <h2>¿Dónde vas a tomar algo?</h2>
+        <button class="btn-lugar" style="background:#E8F5E9; color:#2e7d32; border: 2px solid #C8E6C9;" onclick="mostrarMesas('Terraza')">🍀 TERRAZA</button>
+        <button class="btn-lugar" style="background:#FFF3E0; color:#EF6C00; border: 2px solid #FFE0B2;" onclick="mostrarMesas('Saloncito')">🛋️ SALONCITO</button>
+    </div>
+
+    <div id="paso-mesas" class="seccion oculto" style="text-align: center;">
+        <h2 id="titulo-mesas">Elige tu mesa</h2>
+        <div id="contenedor-mesas" class="grid-mesas"></div>
+        <button onclick="irAtras('paso-lugar')" style="margin-top:20px; background:none; border:none; color:#888; text-decoration:underline;">← Cambiar lugar</button>
+    </div>
+
+    <div id="menu-productos" class="oculto">
+        
+        <div class="seccion">
+            <h2>☕ Cafés Especiales</h2>
+            <div class="producto"><div class="info"><span class="nombre">Mia's Sugar Café</span><span class="sub">Licor 43 flambeado + nata + leche condensada</span></div><span class="precio">5,00€</span><button class="btn-add" onclick="add('Mia Sugar Café', 5)">+</button></div>
+            <div class="producto"><div class="info"><span class="nombre">Café Irlandés</span><span class="sub">Whisky flambeado + crema</span></div><span class="precio">5,00€</span><button class="btn-add" onclick="add('Café Irlandés', 5)">+</button></div>
+            <div class="producto"><div class="info"><span class="nombre">Frapé</span><span class="sub">Café + hielo + helado vainilla</span></div><span class="precio">4,50€</span><button class="btn-add" onclick="add('Frapé', 4.5)">+</button></div>
+            <div class="producto"><span>Café Pistacho / Nutella / Kinder / Lotus</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Especial Sabor', 3)">+</button></div>
+            <div class="producto"><span>Capuchino / Latte Macchiato / Bombón</span><span class="precio">2,50€</span><button class="btn-add" onclick="add('Café Especial', 2.5)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🥤 Bebidas y Cafés</h2>
+            <div class="producto"><span>Café solo / con leche</span><span class="precio">1,50€</span><button class="btn-add" onclick="add('Café Básico', 1.5)">+</button></div>
+            <div class="producto"><span>Chocolate a la taza</span><span class="precio">2,30€</span><button class="btn-add" onclick="add('Chocolate', 2.3)">+</button></div>
+            <div class="producto"><span>Zumo de naranja natural</span><span class="precio">2,50€</span><button class="btn-add" onclick="add('Zumo Naranja', 2.5)">+</button></div>
+            <div class="producto"><span>Refrescos / Zumo botellín</span><span class="precio">1,80€</span><button class="btn-add" onclick="add('Refresco/Zumo', 1.8)">+</button></div>
+            <div class="producto"><span>Agua</span><span class="precio">1,20€</span><button class="btn-add" onclick="add('Agua', 1.2)">+</button></div>
+            <div class="producto"><span>Cerveza</span><span class="precio">1,50€</span><button class="btn-add" onclick="add('Cerveza', 1.5)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🥪 Los Salados</h2>
+            <p style="font-size:0.8em; color:#666; margin-bottom:10px;">(Base a elegir: Sándwich, Croissant o Crepe)</p>
+            <div class="producto"><span>York + Queso + Orégano</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Salado York/Queso', 5)">+</button></div>
+            <div class="producto"><span>Queso Cabra + Miel + Nueces</span><span class="precio">6,00€</span><button class="btn-add" onclick="add('Salado Cabra/Miel', 6)">+</button></div>
+            <div class="producto"><span>York + Queso + Orégano + Huevo</span><span class="precio">6,00€</span><button class="btn-add" onclick="add('Salado York/Huevo', 6)">+</button></div>
+            <div class="producto"><div class="info"><span class="nombre">Especial Pistacho</span><span class="sub">Brotes, Mortadela, Queso, Salsa Pistacho</span></div><span class="precio">7,00€</span><button class="btn-add" onclick="add('Salado Pistacho', 7)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🍦 Helados y Dulces</h2>
+            <div class="producto"><span>Tarrina Pequeña (1 sabor)</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Helado 1 Sabor', 3)">+</button></div>
+            <div class="producto"><span>Tarrina Mediana (2 sabores)</span><span class="precio">4,00€</span><button class="btn-add" onclick="add('Helado 2 Sabores', 4)">+</button></div>
+            <div class="producto"><span>Batido Helado Maxi (con nata)</span><span class="precio">6,50€</span><button class="btn-add" onclick="add('Batido Maxi Nata', 6.5)">+</button></div>
+            <div class="producto"><span>Crepe o Gofre (1 ingrediente)</span><span class="precio">4,50€</span><button class="btn-add" onclick="add('Crepe/Gofre', 4.5)">+</button></div>
+            <div class="producto"><span>Tortitas (1 ingrediente)</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Tortitas', 5)">+</button></div>
+            <div class="producto"><span>Pancake Mia's Sugar</span><span class="precio">6,00€</span><button class="btn-add" onclick="add('Pancake Especial', 6)">+</button></div>
+            <div class="producto"><span>Porción de Tarta</span><span class="precio">4,75€</span><button class="btn-add" onclick="add('Tarta', 4.75)">+</button></div>
+            <div class="producto"><span>Buñuelos + 1 Ingrediente</span><span class="precio">4,00€</span><button class="btn-add" onclick="add('Buñuelos', 4)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>➕ Ingredientes Extra</h2>
+            <div class="producto"><span>Extra Ingrediente</span><span class="precio">0,80€</span><button class="btn-add" onclick="add('Extra Normal', 0.8)">+</button></div>
+            <div class="producto"><span>Extra Fruta</span><span class="precio">1,20€</span><button class="btn-add" onclick="add('Extra Fruta', 1.2)">+</button></div>
+            <div class="producto"><span>Extra Helado</span><span class="precio">1,50€</span><button class="btn-add" onclick="add('Extra Helado', 1.5)">+</button></div>
+        </div>
+
+    </div>
+</div>
+
+<div id="cesta-fija" class="cesta oculto">
+    <div style="display: flex; justify-content: space-between; font-weight: bold; color: #ad1457;">
+        <span>📍 <span id="resumen-u">...</span></span>
+        <span>Total: <span id="total">0.00</span>€</span>
+    </div>
+    <div id="lista-items" style="font-size:0.8em; color:#666; margin: 8px 0; overflow-x: auto; white-space: nowrap;">Cesta vacía</div>
+    <button class="btn-pedir" onclick="enviarPedido()">🚀 ENVIAR PEDIDO A COCINA</button>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let ubi = ""; let cesta = []; let total = 0;
+
+    function mostrarMesas(lugar) {
+        document.getElementById('paso-lugar').classList.add('oculto');
+        document.getElementById('paso-mesas').classList.remove('oculto');
+        document.getElementById('titulo-mesas').innerText = "Mesas de " + lugar;
+        const cont = document.getElementById('contenedor-mesas');
+        cont.innerHTML = "";
+        const n = (lugar === 'Terraza') ? 15 : 7;
+        for (let i = 1; i <= n; i++) {
+            const b = document.createElement('button');
+            b.className = 'btn-mesa'; b.innerText = 'M' + i;
+            b.onclick = () => { ubi = lugar + " - Mesa " + i; irAMenu(); };
+            cont.appendChild(b);
+        }
+    }
+
+    function irAMenu() {
+        document.getElementById('paso-mesas').classList.add('oculto');
+        document.getElementById('menu-productos').classList.remove('oculto');
+        document.getElementById('cesta-fija').classList.remove('oculto');
+        document.getElementById('resumen-u').innerText = ubi;
+        window.scrollTo(0,0);
+    }
+
+    function add(n, p) {
+        cesta.push(n); total += p;
+        document.getElementById('lista-items').innerText = cesta.join(', ');
+        document.getElementById('total').innerText = total.toFixed(2);
+    }
+
+    function enviarPedido() {
+        if (cesta.length === 0) return alert("La cesta está vacía");
+        db.ref('pedidos').push({
+            ubicacion: ubi, productos: cesta, estado: "Nuevo",
+            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        }).then(() => { 
+            alert("¡Pedido recibido! En breve te lo servimos. ✨"); 
+            location.reload(); 
+        });
+    }
+
+    function irAtras(id) {
+        document.getElementById('menu-productos').classList.add('oculto');
+        document.getElementById('cesta-fija').classList.add('oculto');
+        document.getElementById('paso-mesas').classList.add('oculto');
+        document.getElementById(id).classList.remove('oculto');
+    }
+</script>
+</body>
+</html>
