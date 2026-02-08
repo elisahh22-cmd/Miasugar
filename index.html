@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mia's Sugar - Carta Digital</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #fce4ec; margin: 0; padding: 0; color: #333; padding-bottom: 120px; }
+        header { background-color: #ad1457; color: white; text-align: center; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .seccion { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; }
+        h2 { color: #ad1457; border-bottom: 2px solid #f8bbd0; padding-bottom: 5px; margin-top: 0; }
+        
+        /* Botones Grandes de Lugar */
+        .btn-lugar { width: 100%; padding: 25px; margin: 10px 0; border-radius: 15px; border: none; font-size: 1.3em; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        .btn-terraza { background-color: #E8F5E9; color: #2e7d32; border: 2px solid #C8E6C9; }
+        .btn-saloncito { background-color: #FFF3E0; color: #EF6C00; border: 2px solid #FFE0B2; }
+        
+        /* Grid de Mesas */
+        .grid-mesas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .btn-mesa { padding: 15px 5px; border-radius: 10px; background: white; border: 1px solid #ddd; font-weight: bold; cursor: pointer; }
+        .btn-mesa.seleccionada { background-color: #f8bbd0; border-color: #ad1457; }
+
+        /* Productos */
+        .producto { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; text-align: left; }
+        .precio { color: #ad1457; font-weight: bold; }
+        .btn-añadir { background-color: #ad1457; color: white; border: none; padding: 10px 15px; border-radius: 50%; cursor: pointer; font-weight: bold; }
+
+        .aviso-error { background-color: #FFF9C4; border: 2px solid #FBC02D; border-radius: 12px; padding: 15px; margin: 15px 0; }
+        .cesta { background: #fff; padding: 20px; border-top: 5px solid #ad1457; position: fixed; bottom: 0; width: 100%; max-width: 600px; box-sizing: border-box; box-shadow: 0 -5px 15px rgba(0,0,0,0.1); z-index: 100; }
+        .btn-pedir { background-color: #4caf50; color: white; border: none; width: 100%; padding: 15px; font-size: 1.2em; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .oculto { display: none; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1> Mia's Sugar </h1>
+    <p>Pastelería & Café</p>
+</header>
+
+<div class="container">
+    <div id="paso-lugar" class="seccion">
+        <h2>¿Dónde vas a tomar algo?</h2>
+        <button class="btn-lugar btn-terraza" onclick="mostrarMesas('Terraza')">🍀 TERRAZA</button>
+        <button class="btn-lugar btn-saloncito" onclick="mostrarMesas('Saloncito')">🛋️ SALONCITO</button>
+    </div>
+
+    <div id="paso-mesas" class="seccion oculto">
+        <h2 id="titulo-mesas">Elige tu mesa</h2>
+        <div id="contenedor-mesas" class="grid-mesas"></div>
+        <button onclick="irAtras('paso-lugar')" style="margin-top:20px; background:none; border:none; color:#888; text-decoration:underline;">← Cambiar lugar</button>
+    </div>
+
+    <div id="menu-productos" class="oculto">
+        <div class="seccion">
+            <h2>☕ Cafés Especiales</h2>
+            <div class="producto"><div><span>Mia Sugar Café</span><br><span class="precio">5.00€</span></div><button class="btn-añadir" onclick="añadir('Mia Sugar Café', 5)">+</button></div>
+            <div class="producto"><div><span>Café Nutella</span><br><span class="precio">3.50€</span></div><button class="btn-añadir" onclick="añadir('Café Nutella', 3.5)">+</button></div>
+            <div class="producto"><div><span>Cappuccino Especial</span><br><span class="precio">3.00€</span></div><button class="btn-añadir" onclick="añadir('Cappuccino', 3)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>❄️ Frappés y Fríos</h2>
+            <div class="producto"><div><span>Frappé de Oreo</span><br><span class="precio">4.50€</span></div><button class="btn-añadir" onclick="añadir('Frappé Oreo', 4.5)">+</button></div>
+            <div class="producto"><div><span>Frappé Pistacho</span><br><span class="precio">5.50€</span></div><button class="btn-añadir" onclick="añadir('Frappé Pistacho', 5.5)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🥪 Salados</h2>
+            <div class="producto"><div><span>Sándwich York + Queso</span><br><span class="precio">4.50€</span></div><button class="btn-añadir" onclick="añadir('York + Queso', 4.5)">+</button></div>
+            <div class="producto"><div><span>Tosta Especial Pistacho</span><br><span class="precio">7.00€</span></div><button class="btn-añadir" onclick="añadir('Tosta Pistacho', 7)">+</button></div>
+        </div>
+
+        <div class="aviso-error">
+            <p style="margin: 0; color: #5D4037; font-weight: bold; text-align:center;">⚠️ ¡Atención!</p>
+            <p style="margin: 5px 0 0 0; color: #795548; font-size: 0.85em; text-align:center;">Si te has equivocado, <b>avisa inmediatamente a cocina</b>.</p>
+        </div>
+        <button onclick="irAtras('paso-mesas')" style="display:block; margin:20px auto; color:#888; background:none; border:none; text-decoration:underline;">← Cambiar mesa</button>
+    </div>
+</div>
+
+<div id="cesta-fija" class="cesta oculto">
+    <h3 style="margin:0; font-size: 0.9em; color: #ad1457;">📍 <span id="resumen-ubicacion">...</span></h3>
+    <div id="lista-cesta" style="max-height: 50px; overflow-y: auto; font-size: 0.85em; margin: 5px 0; color:#666;"></div>
+    <p style="margin: 5px 0;"><strong>Total: <span id="total">0.00</span>€</strong></p>
+    <button class="btn-pedir" onclick="enviarPedido()">🚀 ENVIAR A COCINA</button>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let lugarActual = "";
+    let ubicacionFinal = "";
+    let cesta = [];
+    let totalPrecio = 0;
+
+    function mostrarMesas(lugar) {
+        lugarActual = lugar;
+        document.getElementById('paso-lugar').classList.add('oculto');
+        document.getElementById('paso-mesas').classList.remove('oculto');
+        document.getElementById('titulo-mesas').innerText = "Mesas de " + lugar;
+        
+        const contenedor = document.getElementById('contenedor-mesas');
+        contenedor.innerHTML = "";
+        const numMesas = (lugar === 'Terraza') ? 15 : 7;
+        
+        for (let i = 1; i <= numMesas; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'btn-mesa';
+            btn.innerText = 'M' + i;
+            btn.onclick = () => seleccionarMesa(i, btn);
+            contenedor.appendChild(btn);
+        }
+    }
+
+    function seleccionarMesa(numero, boton) {
+        ubicacionFinal = lugarActual + " - Mesa " + numero;
+        document.getElementById('resumen-ubicacion').innerText = ubicacionFinal;
+        document.getElementById('paso-mesas').classList.add('oculto');
