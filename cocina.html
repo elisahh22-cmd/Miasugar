@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocina Mia's Sugar - Control Total</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #fce4ec; padding: 20px; }
+        .grid { display: flex; flex-wrap: wrap; gap: 20px; }
+        .tarjeta { background: white; border-radius: 12px; padding: 15px; width: 280px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); border-top: 8px solid #ad1457; }
+        .header-mesa { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; font-weight: bold; }
+        .precio-total { color: #2e7d32; font-size: 1.2em; }
+        .lista { font-size: 0.9em; margin: 10px 0; padding-left: 18px; }
+        .btn-cobrar { background: #4caf50; color: white; border: none; width: 100%; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .nota-caja { background: #fff9c4; padding: 5px; border-radius: 4px; font-size: 0.8em; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1 style="color:#ad1457; text-align:center;">PANEL DE COCINA</h1>
+    <div id="contenedor-mesas" class="grid"></div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // ESCUCHAR CAMBIOS
+    db.ref('pedidos').on('value', (snapshot) => {
+        const pedidos = snapshot.val();
+        const contenedor = document.getElementById('contenedor-mesas');
+        contenedor.innerHTML = ""; // Limpiar pantalla antes de dibujar
+
+        if (!pedidos) return;
+
+        const mesas = {};
+
+        // AGRUPAR SOLO ACTIVOS
+        Object.keys(pedidos).forEach(id => {
+            const p = pedidos[id];
+            
+            // IMPORTANTE: Solo dibujamos si NO está marcado como Cobrado
+            if (p.estado !== "Cobrado") {
+                if (!mesas[p.ubicacion]) {
+                    mesas[p.ubicacion] = { prod: [], total: 0, notas: [], ids: [] };
+                }
+                mesas[p.ubicacion].prod.push(...p.productos);
+                mesas[p.ubicacion].total += parseFloat(p.total || 0);
+                if (p.detalles) mesas[p.ubicacion].notas.push(p.detalles);
+                mesas[p.ubicacion].ids.push(id);
+            }
+        });
+
+        // DIBUJAR
+        Object.keys(mesas).forEach(m => {
+            const mesa = mesas[m];
+            const div = document.createElement('div');
+            div.className = 'tarjeta';
+            div.innerHTML = `
+                <div class="header-mesa">
+                    <span>${m}</span>
+                    <span class="precio-total">${mesa.total.toFixed(2)}€</span>
+                </div>
+                <ul class="lista">${mesa.prod.map(i => `<li>${i}</li>`).join('')}</ul>
+                ${mesa.notas.length > 0 ? `<div class="nota-caja"><strong>Notas:</strong> ${mesa.notas.join(' | ')}</div>` : ''}
+                <button class="btn-cobrar" onclick="cobrarMesa('${m}', ${JSON.stringify(mesa.ids)})">✅ COBRAR Y FINALIZAR</button>
+            `;
+            contenedor.appendChild(div);
+        });
+    });
+
+    // FUNCIÓN DE COBRO
+    function cobrarMesa(nombre, listaIds) {
+        if (confirm("¿Cobrar la " + nombre + "?")) {
+            // Recorremos cada ID de esa mesa y cambiamos su estado en la nube
+            listaIds.forEach(id => {
+                db.ref('pedidos/' + id).update({
+                    estado: "Cobrado"
+                }).then(() => {
+                    console.log("Pedido " + id + " actualizado.");
+                }).catch((error) => {
+                    console.error("Error actualizando: ", error);
+                });
+            });
+            
+            // Forzar limpieza visual inmediata por si la red es lenta
+            alert(nombre + " cobrada correctamente.");
+        }
+    }
+</script>
+</body>
+</html>
