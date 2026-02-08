@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mia's Sugar - Carta 100% Detallada</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #fce4ec; margin: 0; padding: 0; color: #333; padding-bottom: 250px; }
+        header { background-color: #ad1457; color: white; text-align: center; padding: 15px; position: sticky; top: 0; z-index: 100; }
+        .container { padding: 15px; max-width: 600px; margin: auto; }
+        .seccion { background: white; border-radius: 15px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        h2 { color: #ad1457; border-bottom: 2px solid #f8bbd0; padding-bottom: 5px; font-size: 1.1em; text-transform: uppercase; margin-top: 10px; }
+        .producto { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9f9f9; }
+        .nombre { font-weight: bold; font-size: 0.85em; flex-grow: 1; padding-right: 10px; line-height: 1.2; }
+        .precio { color: #ad1457; font-weight: bold; font-size: 0.85em; min-width: 50px; text-align: right; }
+        .btn-add { background-color: #ad1457; color: white; border: none; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 1.1em; margin-left: 10px; }
+        .cesta { background: #fff; padding: 15px; border-top: 5px solid #ad1457; position: fixed; bottom: 0; width: 100%; max-width: 600px; box-sizing: border-box; box-shadow: 0 -5px 15px rgba(0,0,0,0.2); z-index: 1000; }
+        .btn-pedir { background-color: #4caf50; color: white; border: none; width: 100%; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        textarea { width: 100%; height: 50px; border-radius: 8px; border: 1px solid #ddd; padding: 8px; font-size: 0.85em; box-sizing: border-box; resize: none; margin-top: 5px; }
+        .oculto { display: none; }
+        .grid-mesas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .btn-m { padding: 12px; border-radius: 8px; border: 1px solid #ddd; background: white; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<header><h1 style="margin:0; font-size: 1.3em;">Mia's Sugar</h1></header>
+
+<div class="container">
+    <div id="paso-mesa" class="seccion" style="text-align:center;">
+        <h2>Elige tu mesa</h2>
+        <div class="grid-mesas">
+            <button class="btn-m" onclick="fijarMesa('T1')">T1</button>
+            <button class="btn-m" onclick="fijarMesa('T2')">T2</button>
+            <button class="btn-m" onclick="fijarMesa('T3')">T3</button>
+            <button class="btn-m" onclick="fijarMesa('T4')">T4</button>
+            <button class="btn-m" onclick="fijarMesa('S1')">S1</button>
+            <button class="btn-m" onclick="fijarMesa('S2')">S2</button>
+            <button class="btn-m" onclick="fijarMesa('S3')">S3</button>
+        </div>
+    </div>
+
+    <div id="carta" class="oculto">
+        
+        <div class="seccion">
+            <h2>☕ Cafés Especiales</h2>
+            <div class="producto"><span class="nombre">Mia's Sugar Café (Licor 43 + Nata + Canela + Limón)</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Mia Sugar Café', 5)">+</button></div>
+            <div class="producto"><span class="nombre">Café Affogato (Sabores)</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Affogato', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Bombón (+ Leche condensada)</span><span class="precio">2,50€</span><button class="btn-add" onclick="add('Café Bombón', 2.5)">+</button></div>
+            <div class="producto"><span class="nombre">Capuchino (Café + Crema leche)</span><span class="precio">2,50€</span><button class="btn-add" onclick="add('Capuchino', 2.5)">+</button></div>
+            <div class="producto"><span class="nombre">Capuchino con Nata</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Capuchino Nata', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Latte Machiato</span><span class="precio">2,50€</span><button class="btn-add" onclick="add('Latte Machiato', 2.5)">+</button></div>
+            <div class="producto"><span class="nombre">Carajillo de Baileys</span><span class="precio">2,50€</span><button class="btn-add" onclick="add('Carajillo Baileys', 2.5)">+</button></div>
+            <div class="producto"><span class="nombre">Café Irlandés (Whisky flambeado)</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Café Irlandés', 5)">+</button></div>
+            <div class="producto"><span class="nombre">Frappé (Café + Vainilla)</span><span class="precio">4,50€</span><button class="btn-add" onclick="add('Frappé', 4.5)">+</button></div>
+            <div class="producto"><span class="nombre">Café Chocolate Blanco</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Choc. Blanco', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Nutella</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Nutella', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Chocolate Negro</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Choc. Negro', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Dulce de Leche</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Dulce Leche', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Kinder</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Kinder', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Caramelo</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Caramelo', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Lotus</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Lotus', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Pistacho</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Café Pistacho', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Mia's ¡Helados! (+ Nata)</span><span class="precio">4,50€</span><button class="btn-add" onclick="add('Café Helados', 4.5)">+</button></div>
+            <div class="producto"><span class="nombre">Vainilla Iced Latte</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Vainilla Iced Latte', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Vainilla Latte (Caliente)</span><span class="precio">2,80€</span><button class="btn-add" onclick="add('Vainilla Latte', 2.8)">+</button></div>
+            <div class="producto"><span class="nombre">Iced Latte Arándanos</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Iced Latte Arándanos', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Vienés</span><span class="precio">2,80€</span><button class="btn-add" onclick="add('Café Vienés', 2.8)">+</button></div>
+            <div class="producto"><span class="nombre">Expresso Tonic</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Expresso Tonic', 3)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🥤 Bebidas y Básicos</h2>
+            <div class="producto"><span class="nombre">Café (Solo/Cortado/Leche)</span><span class="precio">1,50€</span><button class="btn-add" onclick="add('Café Básico', 1.5)">+</button></div>
+            <div class="producto"><span class="nombre">Colacao</span><span class="precio">1,60€</span><button class="btn-add" onclick="add('Colacao', 1.6)">+</button></div>
+            <div class="producto"><span class="nombre">Vaso de leche</span><span class="precio">1,40€</span><button class="btn-add" onclick="add('Vaso leche', 1.4)">+</button></div>
+            <div class="producto"><span class="nombre">Chocolate a la taza</span><span class="precio">2,30€</span><button class="btn-add" onclick="add('Choco taza', 2.3)">+</button></div>
+            <div class="producto"><span class="nombre">Chocolate a la taza + Nata</span><span class="precio">2,80€</span><button class="btn-add" onclick="add('Choco taza+nata', 2.8)">+</button></div>
+            <div class="producto"><span class="nombre">Refrescos / Zumo botellín</span><span class="precio">1,80€</span><button class="btn-add" onclick="add('Refresco/Zumo', 1.8)">+</button></div>
+            <div class="producto"><span class="nombre">Zumo de naranja natural</span><span class="precio">2,50€</span><button class="btn-add" onclick="add('Zumo Naranja', 2.5)">+</button></div>
+            <div class="producto"><span class="nombre">Agua</span><span class="precio">1,20€</span><button class="btn-add" onclick="add('Agua', 1.2)">+</button></div>
+            <div class="producto"><span class="nombre">Cerveza</span><span class="precio">1,50€</span><button class="btn-add" onclick="add('Cerveza', 1.5)">+</button></div>
+            <div class="producto"><span class="nombre">Red Bull</span><span class="precio">2,75€</span><button class="btn-add" onclick="add('Red Bull', 2.75)">+</button></div>
+            <div class="producto"><span class="nombre">Suplemento Leche Vegetal</span><span class="precio">0,20€</span><button class="btn-add" onclick="add('Supl. Vegetal', 0.2)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🍃 Tés e Infusiones</h2>
+            <div class="producto"><span class="nombre">Té Negro Canela</span><span class="precio">2,20€</span><button class="btn-add" onclick="add('Té Negro Canela', 2.2)">+</button></div>
+            <div class="producto"><span class="nombre">Té Rojo Pu-Erh Yunnan</span><span class="precio">2,20€</span><button class="btn-add" onclick="add('Té Rojo Pu-Erh', 2.2)">+</button></div>
+            <div class="producto"><span class="nombre">Té Verde China Gunpowder</span><span class="precio">2,20€</span><button class="btn-add" onclick="add('Té Verde China', 2.2)">+</button></div>
+            <div class="producto"><span class="nombre">Té Verde Hierbabuena</span><span class="precio">2,20€</span><button class="btn-add" onclick="add('Té Verde Hierba', 2.2)">+</button></div>
+            <div class="producto"><span class="nombre">Matcha Latte</span><span class="precio">2,80€</span><button class="btn-add" onclick="add('Matcha Latte', 2.8)">+</button></div>
+            <div class="producto"><span class="nombre">Iced Matcha Latte</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Iced Matcha Latte', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Manzanilla / Menta / Frutos Bosque</span><span class="precio">1,80€</span><button class="btn-add" onclick="add('Infusión', 1.8)">+</button></div>
+            <div class="producto"><span class="nombre">Rooibos Albahaca / Gengibre Limón</span><span class="precio">2,20€</span><button class="btn-add" onclick="add('Infusión Premium', 2.2)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🍦 Helados y Batidos</h2>
+            <div class="producto"><span class="nombre">Tarrina Pequeña (1 sabor)</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Helado Peq', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Tarrina Mediana (2 sabores)</span><span class="precio">4,00€</span><button class="btn-add" onclick="add('Helado Med', 4)">+</button></div>
+            <div class="producto"><span class="nombre">Tarrina Grande (3 sabores)</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Helado Gde', 5)">+</button></div>
+            <div class="producto"><span class="nombre">Copa Helada (3 bolas)</span><span class="precio">6,50€</span><button class="btn-add" onclick="add('Copa Helada', 6.5)">+</button></div>
+            <div class="producto"><span class="nombre">Batido Maxi Sin Nata</span><span class="precio">5,50€</span><button class="btn-add" onclick="add('Batido Maxi s/n', 5.5)">+</button></div>
+            <div class="producto"><span class="nombre">Batido Maxi Con Nata</span><span class="precio">6,50€</span><button class="btn-add" onclick="add('Batido Maxi c/n', 6.5)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🥞 Gofres, Crepes y Tortitas</h2>
+            <div class="producto"><span class="nombre">Crepe o Gofre (+ 1 Ingrediente)</span><span class="precio">4,50€</span><button class="btn-add" onclick="add('Crepe/Gofre', 4.5)">+</button></div>
+            <div class="producto"><span class="nombre">Tortitas (+ 1 Ingrediente)</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Tortitas', 5)">+</button></div>
+            <div class="producto"><span class="nombre">Pancake Mia's Sugar (Salsa a elegir)</span><span class="precio">6,00€</span><button class="btn-add" onclick="add('Pancake Mia', 6)">+</button></div>
+            <div class="producto"><span class="nombre">Suplemento Ingrediente</span><span class="precio">0,80€</span><button class="btn-add" onclick="add('Extra Ingrediente', 0.8)">+</button></div>
+            <div class="producto"><span class="nombre">Suplemento Fruta</span><span class="precio">1,20€</span><button class="btn-add" onclick="add('Extra Fruta', 1.2)">+</button></div>
+            <div class="producto"><span class="nombre">Suplemento Bola Helado</span><span class="precio">1,50€</span><button class="btn-add" onclick="add('Extra Helado', 1.5)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🥪 Los Salados</h2>
+            <p style="font-size:0.75em; color:#ad1457;">Base a elegir: Sandwich, Croissant o Crepe</p>
+            <div class="producto"><span class="nombre">1. York + Queso + Orégano</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Salado 1 (York)', 5)">+</button></div>
+            <div class="producto"><span class="nombre">2. Queso Cabra + Miel + Nueces</span><span class="precio">6,00€</span><button class="btn-add" onclick="add('Salado 2 (Cabra)', 6)">+</button></div>
+            <div class="producto"><span class="nombre">3. York + Queso + Orégano + Huevo</span><span class="precio">6,00€</span><button class="btn-add" onclick="add('Salado 3 (Huevo)', 6)">+</button></div>
+            <div class="producto"><span class="nombre">4. Especial Pistacho (Brotes/Mortadela)</span><span class="precio">7,00€</span><button class="btn-add" onclick="add('Salado 4 (Pistacho)', 7)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>🍰 Otros Dulces</h2>
+            <div class="producto"><span class="nombre">Porción de tarta</span><span class="precio">4,75€</span><button class="btn-add" onclick="add('Tarta', 4.75)">+</button></div>
+            <div class="producto"><span class="nombre">Croissant Relleno (Vitrina + Helado)</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Croissant Relleno', 5)">+</button></div>
+            <div class="producto"><span class="nombre">Buñuelos de viento (+ 1 Ingrediente)</span><span class="precio">4,00€</span><button class="btn-add" onclick="add('Buñuelos', 4)">+</button></div>
+        </div>
+
+    </div>
+</div>
+
+<div id="cesta-fija" class="cesta oculto">
+    <div style="display: flex; justify-content: space-between; font-weight: bold; color: #ad1457; font-size: 0.9em;">
+        <span>📍 Mesa <span id="resumen-u">...</span></span>
+        <span>Total: <span id="total">0.00</span>€</span>
+    </div>
+    <div id="lista-items" style="font-size:0.75em; color:#666; margin: 5px 0; max-height: 40px; overflow-y: auto;">Cesta vacía</div>
+    <textarea id="notas-pedido" placeholder="Escribe aquí los sabores de helado, el tipo de base salada, o si quieres algo con sacarina..."></textarea>
+    <button class="btn-pedir" onclick="enviarPedido()">🚀 CONFIRMAR PEDIDO</button>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let ubi = ""; let cesta = []; let total = 0;
+
+    function fijarMesa(m) {
+        ubi = m;
+        document.getElementById('paso-mesa').classList.add('oculto');
+        document.getElementById('carta').classList.remove('oculto');
+        document.getElementById('cesta-fija').classList.remove('oculto');
+        document.getElementById('resumen-u').innerText = ubi;
+    }
+
+    function add(n, p) {
+        cesta.push(n); total += p;
+        document.getElementById('lista-items').innerText = cesta.join(', ');
+        document.getElementById('total').innerText = total.toFixed(2);
+    }
+
+    function enviarPedido() {
+        if (cesta.length === 0) return alert("Cesta vacía");
+        const notas = document.getElementById('notas-pedido').value;
+        db.ref('pedidos').push({
+            ubicacion: ubi, productos: cesta, notas: notas, estado: "Nuevo",
+            hora: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        }).then(() => { 
+            alert("¡Pedido enviado! ✨"); 
+            location.reload(); 
+        });
+    }
+</script>
+</body>
+</html>
