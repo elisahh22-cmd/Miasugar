@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocina - Mia's Sugar</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background-color: #fce4ec; margin: 0; padding: 20px; }
+        h1 { color: #ad1457; text-align: center; }
+        .grid-cocina { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
+        .tarjeta-mesa { background: white; border-radius: 15px; padding: 20px; width: 300px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); border-top: 10px solid #ad1457; }
+        .mesa-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #fce4ec; padding-bottom: 10px; }
+        .total { color: #4caf50; font-weight: bold; font-size: 1.2em; }
+        .btn-cobrar { background-color: #4caf50; color: white; border: none; width: 100%; padding: 10px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+        .lista-p { padding-left: 20px; font-size: 0.9em; }
+        .nota { background: #fff9c4; padding: 8px; border-radius: 5px; font-size: 0.8em; margin-top: 10px; border-left: 3px solid #fbc02d; }
+    </style>
+</head>
+<body>
+
+    <h1>👨‍🍳 Pedidos por Mesa</h1>
+    <div id="contenedor-mesas" class="grid-cocina"></div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // LEER PEDIDOS Y AGRUPAR
+    db.ref('pedidos').on('value', (snapshot) => {
+        const pedidos = snapshot.val();
+        const contenedor = document.getElementById('contenedor-mesas');
+        contenedor.innerHTML = "";
+
+        if (!pedidos) return;
+
+        const mesas = {};
+
+        // Agrupamos solo los que NO están cobrados
+        Object.keys(pedidos).forEach(id => {
+            const p = pedidos[id];
+            
+            // FILTRO CRÍTICO: Si el estado es "Cobrado", lo ignoramos por completo
+            if (p.estado !== "Cobrado") {
+                if (!mesas[p.ubicacion]) {
+                    mesas[p.ubicacion] = { productos: [], total: 0, notas: [], ids: [] };
+                }
+                mesas[p.ubicacion].productos.push(...p.productos);
+                mesas[p.ubicacion].total += parseFloat(p.total || 0);
+                if (p.detalles) mesas[p.ubicacion].notas.push(p.detalles);
+                mesas[p.ubicacion].ids.push(id);
+            }
+        });
+
+        // Dibujar mesas
+        Object.keys(mesas).forEach(nombreMesa => {
+            const m = mesas[nombreMesa];
+            const card = document.createElement('div');
+            card.className = 'tarjeta-mesa';
+            
+            card.innerHTML = `
+                <div class="mesa-header">
+                    <span style="font-weight:bold">${nombreMesa}</span>
+                    <span class="total">${m.total.toFixed(2)}€</span>
+                </div>
+                <ul class="lista-p">${m.productos.map(prod => `<li>${prod}</li>`).join('')}</ul>
+                ${m.notas.length > 0 ? `<div class="nota"><strong>Notas:</strong> ${m.notas.join(' | ')}</div>` : ''}
+                <button class="btn-cobrar" onclick="finalizarMesa('${nombreMesa}', ${JSON.stringify(m.ids)})">✅ COBRAR Y QUITAR</button>
+            `;
+            contenedor.appendChild(card);
+        });
+    });
+
+    // FUNCIÓN PARA CAMBIAR ESTADO EN FIREBASE
+    function finalizarMesa(nombre, ids) {
+        if (confirm("¿Marcar " + nombre + " como cobrada? Se quitará de la pantalla.")) {
+            ids.forEach(id => {
+                // Actualizamos el estado a "Cobrado" para cada pedido de esa mesa
+                db.ref('pedidos/' + id).update({ estado: "Cobrado" });
+            });
+        }
+    }
+</script>
+</body>
+</html>
