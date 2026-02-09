@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mia's Sugar - Pedidos</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --rosa: #ad1457; --fondo: #fce4ec; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--fondo); margin: 0; padding-bottom: 300px; }
+        header { background: var(--rosa); color: white; text-align: center; padding: 15px; position: sticky; top: 0; z-index: 100; }
+        .seccion { background: white; margin: 15px; padding: 15px; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h2 { color: var(--rosa); border-bottom: 2px solid var(--fondo); padding-bottom: 5px; font-size: 1.1em; }
+        
+        /* Estilos de Selección de Mesa */
+        .btn-lugar { width: 100%; padding: 20px; margin: 10px 0; border: none; border-radius: 10px; font-size: 1.2em; font-weight: bold; cursor: pointer; color: white; }
+        .terraza { background: #2e7d32; }
+        .salon { background: #ef6c00; }
+        .grid-mesas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 15px; }
+        .btn-mesa { padding: 15px 5px; border: 1px solid #ddd; border-radius: 8px; background: white; font-weight: bold; cursor: pointer; }
+        .btn-mesa:active { background: var(--rosa); color: white; }
+
+        /* Estilos de Carta */
+        .producto { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
+        .nombre { font-size: 0.9em; font-weight: bold; flex-grow: 1; }
+        .precio { color: var(--rosa); font-weight: bold; margin: 0 10px; }
+        .btn-add { background: var(--rosa); color: white; border: none; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 1.2em; }
+        
+        /* Cesta */
+        .cesta { position: fixed; bottom: 0; width: 100%; background: white; padding: 15px; border-top: 4px solid var(--rosa); box-sizing: border-box; z-index: 200; }
+        textarea { width: 100%; height: 50px; margin: 10px 0; border-radius: 8px; border: 1px solid #ccc; padding: 8px; box-sizing: border-box; }
+        .btn-pedir { background: #4caf50; color: white; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; font-size: 1.1em; }
+        
+        .oculto { display: none; }
+        .btn-volver { background: none; border: none; color: var(--rosa); text-decoration: underline; cursor: pointer; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+<header><h1>Mia's Sugar</h1></header>
+
+<div class="container">
+    <div id="paso-lugar" class="seccion">
+        <h2 style="text-align: center;">¿Dónde estás sentado?</h2>
+        <button class="btn-lugar terraza" onclick="seleccionarLugar('Terraza', 15)">🍀 TERRAZA</button>
+        <button class="btn-lugar salon" onclick="seleccionarLugar('Salón', 7)">🛋️ SALONCITO</button>
+    </div>
+
+    <div id="paso-mesa" class="seccion oculto">
+        <button class="btn-volver" onclick="irAPaso(1)">← Cambiar de zona</button>
+        <h2 id="titulo-mesa">Selecciona tu mesa</h2>
+        <div id="grid-mesas" class="grid-mesas"></div>
+    </div>
+
+    <div id="la-carta" class="oculto">
+        <div class="seccion" style="background: #ad1457; color: white; text-align: center; padding: 10px;">
+            Mesa seleccionada: <strong id="mesa-final">--</strong> 
+            <button onclick="irAPaso(2)" style="color: white; font-size: 0.8em; margin-left: 10px;">(Cambiar)</button>
+        </div>
+
+        <div class="seccion">
+            <h2>🥪 Los Salados (Elige base primero)</h2>
+            <div id="base-salado">
+                <button class="btn-lugar" style="background:#555; padding:10px" onclick="setBase('Sandwich')">🍞 Sandwich</button>
+                <button class="btn-lugar" style="background:#555; padding:10px" onclick="setBase('Croissant')">🥐 Croissant</button>
+                <button class="btn-lugar" style="background:#555; padding:10px" onclick="setBase('Crepe')">🥞 Crepe Salado</button>
+            </div>
+            <div id="rellenos-salados" class="oculto">
+                <p>Base: <strong id="base-actual"></strong></p>
+                <div class="producto">
+                    <span class="nombre">1. York + Queso + Orégano</span>
+                    <span class="precio">5,00€</span>
+                    <button class="btn-add" onclick="addConBase('Relleno 1', 5)">+</button>
+                </div>
+                <div class="producto">
+                    <span class="nombre">2. Queso Cabra + Miel + Nueces</span>
+                    <span class="precio">6,00€</span>
+                    <button class="btn-add" onclick="addConBase('Relleno 2', 6)">+</button>
+                </div>
+                <button class="btn-volver" onclick="resetBase()">↺ Cambiar base</button>
+            </div>
+        </div>
+
+        <div class="seccion">
+            <h2>🍦 Helados</h2>
+            <div class="producto"><span class="nombre">Tarrina Pequeña</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Tarrina Peq', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Tarrina Mediana</span><span class="precio">4,00€</span><button class="btn-add" onclick="add('Tarrina Med', 4)">+</button></div>
+            <div class="producto"><span class="nombre">Tarrina Grande</span><span class="precio">5,00€</span><button class="btn-add" onclick="add('Tarrina Gde', 5)">+</button></div>
+            <div class="producto"><span class="nombre">Cono Helado</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Cono', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Tarrina 1/2 Litro</span><span class="precio">8,50€</span><button class="btn-add" onclick="add('Tarrina 1/2L', 8.5)">+</button></div>
+            <div class="producto"><span class="nombre">Copa 3 bolas</span><span class="precio">6,50€</span><button class="btn-add" onclick="add('Copa 3B', 6.5)">+</button></div>
+        </div>
+
+        <div class="seccion">
+            <h2>☕ Cafés Especiales</h2>
+            <div class="producto"><span class="nombre">Café Affogato</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Affogato', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Café Kinder + Nata</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('C. Kinder', 3)">+</button></div>
+            <div class="producto"><span class="nombre">Pistacho Iced Latte</span><span class="precio">3,00€</span><button class="btn-add" onclick="add('Iced Pistacho', 3)">+</button></div>
+        </div>
+    </div>
+</div>
+
+<div id="carrito" class="cesta oculto">
+    <div style="display: flex; justify-content: space-between; font-weight: bold; color: var(--rosa);">
+        <span>PEDIDO</span>
+        <span>Total: <span id="total">0.00</span>€</span>
+    </div>
+    <div id="resumen" style="font-size: 0.8em; color: #666; margin-top: 5px;">Vacío</div>
+    <textarea id="notas" placeholder="Ej: Helado de chocolate, sin lactosa, etc..."></textarea>
+    <button class="btn-pedir" onclick="enviarPedido()">🚀 ENVIAR PEDIDO</button>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    let ubicacionActual = "";
+    let cesta = [];
+    let totalPrecio = 0;
+    let baseElegida = "";
+
+    // LÓGICA DE NAVEGACIÓN
+    function irAPaso(paso) {
+        document.getElementById('paso-lugar').classList.add('oculto');
+        document.getElementById('paso-mesa').classList.add('oculto');
+        document.getElementById('la-carta').classList.add('oculto');
+        document.getElementById('carrito').classList.add('oculto');
+
+        if(paso === 1) document.getElementById('paso-lugar').classList.remove('oculto');
+        if(paso === 2) document.getElementById('paso-mesa').classList.remove('oculto');
+        if(paso === 3) {
+            document.getElementById('la-carta').classList.remove('oculto');
+            document.getElementById('carrito').classList.remove('oculto');
+        }
+    }
+
+    function seleccionarLugar(lugar, numMesas) {
+        ubicacionActual = lugar;
+        document.getElementById('titulo-mesa').innerText = "Mesas de " + lugar;
+        const grid = document.getElementById('grid-mesas');
+        grid.innerHTML = "";
+        
+        for (let i = 1; i <= numMesas; i++) {
+            const btn = document.createElement('button');
+            btn.className = "btn-mesa";
+            btn.innerText = "Mesa " + i;
+            btn.onclick = () => {
+                ubicacionActual = lugar + " - Mesa " + i;
+                document.getElementById('mesa-final').innerText = ubicacionActual;
+                irAPaso(3);
+            };
+            grid.appendChild(btn);
+        }
+        irAPaso(2);
+    }
+
+    // LÓGICA DE SALADOS
+    function setBase(b) {
+        baseElegida = b;
+        document.getElementById('base-actual').innerText = b;
+        document.getElementById('base-salado').classList.add('oculto');
+        document.getElementById('rellenos-salados').classList.remove('oculto');
+    }
+
+    function resetBase() {
+        baseElegida = "";
+        document.getElementById('base-salado').classList.remove('oculto');
+        document.getElementById('rellenos-salados').classList.add('oculto');
+    }
+
+    function addConBase(relleno, precio) {
+        add(baseElegida + " " + relleno, precio);
+        resetBase();
+    }
+
+    // CARRITO
+    function add(nombre, precio) {
+        cesta.push(nombre);
+        totalPrecio += precio;
+        document.getElementById('resumen').innerText = cesta.join(", ");
+        document.getElementById('total').innerText = totalPrecio.toFixed(2);
+    }
+
+    function enviarPedido() {
+        if (cesta.length === 0) return alert("Añade algo a la cesta");
+        
+        db.ref('pedidos').push({
+            ubicacion: ubicacionActual,
+            productos: cesta,
+            detalles: document.getElementById('notas').value,
+            total: totalPrecio.toFixed(2),
+            estado: "Nuevo",
+            hora: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        }).then(() => {
+            alert("¡Pedido enviado! Espere en su mesa.");
+            location.reload();
+        });
+    }
+</script>
+</body>
+</html>
