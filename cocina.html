@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocina Mia's Sugar - Control Total</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --rosa: #ad1457; --fondo: #fce4ec; --verde: #2e7d32; --rojo: #c62828; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--fondo); margin: 0; padding: 20px; }
+        .header-panel { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { color: var(--rosa); margin: 0; font-size: 1.4rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .tarjeta { background: white; border-radius: 15px; border-top: 8px solid var(--rosa); box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .t-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .t-mesa { font-weight: bold; font-size: 1.2rem; }
+        .t-total { color: var(--verde); font-weight: bold; font-size: 1.2rem; }
+        .t-cuerpo { padding: 15px; flex-grow: 1; }
+        ul { padding-left: 20px; margin: 0; color: #333; }
+        li { margin-bottom: 5px; font-weight: 500; }
+        .t-nota { background: #fff9c4; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 10px; border-left: 4px solid #fbc02d; }
+        .btn-cobrar { background: var(--verde); color: white; border: none; padding: 15px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .btn-cobrar:hover { background: #1b5e20; }
+        .btn-limpiar { background: var(--rojo); color: white; border: none; padding: 10px 15px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div class="header-panel">
+    <h1>👨‍🍳 Cocina y Caja</h1>
+    <button class="btn-limpiar" onclick="borrarTodo()">⚠️ BORRAR TODA LA BASE</button>
+</div>
+
+<div id="contenedor-pedidos" class="grid">
+    <p style="text-align: center; color: #888;">Cargando pedidos...</p>
+</div>
+
+<script>
+    // Configuración
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 1. ESCUCHAR DATOS
+    db.ref('pedidos').on('value', (snapshot) => {
+        const pedidos = snapshot.val();
+        const contenedor = document.getElementById('contenedor-pedidos');
+        contenedor.innerHTML = "";
+
+        if (!pedidos) {
+            contenedor.innerHTML = "<p style='grid-column: 1/-1; text-align: center; padding: 50px;'>No hay pedidos pendientes ✨</p>";
+            return;
+        }
+
+        const mesas = {};
+
+        // 2. AGRUPAR SOLO LOS NO COBRADOS
+        Object.keys(pedidos).forEach(id => {
+            const p = pedidos[id];
+            // Solo procesamos si NO está marcado como Cobrado
+            if (p.estado !== "Cobrado") {
+                const ubi = p.ubicacion || "Sin Mesa";
+                if (!mesas[ubi]) {
+                    mesas[ubi] = { productos: [], total: 0, notas: [], ids: [] };
+                }
+                mesas[ubi].productos.push(...p.productos);
+                mesas[ubi].total += parseFloat(p.total || 0);
+                if (p.detalles) mesas[ubi].notas.push(p.detalles);
+                mesas[ubi].ids.push(id); // Guardamos el ID real de Firebase
+            }
+        });
+
+        // 3. RENDERIZAR
+        Object.keys(mesas).forEach(m => {
+            const data = mesas[m];
+            const div = document.createElement('div');
+            div.className = 'tarjeta';
+            div.innerHTML = `
+                <div class="t-header">
+                    <span class="t-mesa">${m}</span>
+                    <span class="t-total">${data.total.toFixed(2)}€</span>
+                </div>
+                <div class="t-cuerpo">
+                    <ul>${data.productos.map(prod => `<li>${prod}</li>`).join('')}</ul>
+                    ${data.notas.length > 0 ? `<div class="t-nota"><strong>Notas:</strong><br>${data.notas.join(' / ')}</div>` : ''}
+                </div>
+                <button class="btn-cobrar" onclick="finalizarMesa('${m}', ${JSON.stringify(data.ids)})">
+                    ✅ COBRAR Y QUITAR
+                </button>
+            `;
+            contenedor.appendChild(div);
+        });
+    });
+
+    // 4. FUNCIÓN PARA CERRAR (CORREGIDA)
+    function finalizarMesa(nombre, ids) {
+        if (confirm(`¿Cobrar y quitar la ${nombre}?`)) {
+            // Creamos un objeto de actualizaciones masivas
+            const updates = {};
+            ids.forEach(id => {
+                // Cambiamos el estado a "Cobrado" en cada ID de esa mesa
+                updates['/pedidos/' + id + '/estado'] = "Cobrado";
+            });
+
+            // Aplicamos la actualización
+            db.ref().update(updates)
+            .then(() => {
+                console.log("Mesa " + nombre + " cerrada con éxito.");
+            })
+            .catch((error) => {
+                alert("Error al cerrar: " + error.message);
+            });
+        }
+    }
+
+    // 5. BORRAR TODA LA BASE
+    function borrarTodo() {
+        if (confirm("⚠️ ESTO BORRARÁ TODOS LOS PEDIDOS. ¿Seguro?")) {
+            db.ref('pedidos').remove();
+        }
+    }
+</script>
+</body>
+</html>
