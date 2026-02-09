@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mia's Sugar - Panel Cocina</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #2c3e50; color: white; margin: 0; padding: 20px; }
+        h1 { text-align: center; color: #fce4ec; border-bottom: 2px solid #ad1457; padding-bottom: 10px; }
+        
+        .contenedor-pedidos { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        
+        /* TARJETA DE PEDIDO */
+        .pedido-card { 
+            background: white; color: #333; border-radius: 15px; padding: 15px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); transition: all 0.3s;
+            border-left: 10px solid #ad1457;
+        }
+
+        /* ESTADO SERVIDO (Apagado) */
+        .pedido-servido { opacity: 0.6; background: #e0e0e0; border-left-color: #95a5a6; }
+
+        .header-pedido { display: flex; justify-content: space-between; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 10px; }
+        .mesa-num { font-size: 1.4em; font-weight: bold; color: #ad1457; }
+        .hora { font-size: 0.9em; color: #666; }
+        
+        .lista-productos { margin: 10px 0; padding: 0; list-style: none; }
+        .lista-productos li { padding: 5px 0; border-bottom: 1px dashed #ddd; font-weight: 500; }
+        
+        .notas { background: #fffde7; border: 1px solid #fbc02d; padding: 8px; border-radius: 5px; font-size: 0.9em; margin-bottom: 15px; color: #5d4037; }
+        
+        .acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: white; }
+        
+        .btn-servido { background: #ef6c00; grid-column: span 2; }
+        .btn-servido.ya-servido { background: #95a5a6; }
+        
+        .btn-cobrar { background: #2e7d32; }
+        .btn-finalizar { background: #c62828; }
+        
+        audio { display: none; }
+    </style>
+</head>
+<body>
+
+<h1>👨‍🍳 Cocina Mia's Sugar</h1>
+<div id="lista-pedidos" class="contenedor-pedidos"></div>
+
+<audio id="sonido-notif" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Guardamos el estado de las mesas servidas localmente para comparar
+    let mesasServidas = JSON.parse(localStorage.getItem('mesasServidas')) || {};
+
+    db.ref('pedidos').on('value', (snapshot) => {
+        const pedidos = snapshot.val();
+        const contenedor = document.getElementById('lista-pedidos');
+        const sonido = document.getElementById('sonido-notif');
+        
+        contenedor.innerHTML = "";
+        
+        if (pedidos) {
+            Object.keys(pedidos).forEach(id => {
+                const p = pedidos[id];
+                const totalProductos = p.productos.length;
+                
+                // Si el número de productos es mayor al que marcamos como servido, se "enciende" de nuevo
+                let estaServido = false;
+                if (mesasServidas[id] && mesasServidas[id] === totalProductos) {
+                    estaServido = true;
+                }
+
+                const card = document.createElement('div');
+                card.className = `pedido-card ${estaServido ? 'pedido-servido' : ''}`;
+                
+                card.innerHTML = `
+                    <div class="header-pedido">
+                        <span class="mesa-num">${p.ubicacion}</span>
+                        <span class="hora">${p.hora}</span>
+                    </div>
+                    <ul class="lista-productos">
+                        ${p.productos.map(prod => `<li>✅ ${prod}</li>`).join('')}
+                    </ul>
+                    ${p.detalles ? `<div class="notas"><strong>Notas:</strong> ${p.detalles}</div>` : ''}
+                    <div style="text-align:right; font-weight:bold; margin-bottom:10px;">Total: ${p.total}€</div>
+                    <div class="acciones">
+                        <button class="btn btn-servido ${estaServido ? 'ya-servido' : ''}" onclick="marcarServido('${id}', ${totalProductos})">
+                            ${estaServido ? '✓ SERVIDO' : '🔔 MARCAR COMO SERVIDO'}
+                        </button>
+                        <button class="btn btn-cobrar" onclick="cobrarPedido('${id}')">💸 COBRAR</button>
+                        <button class="btn btn-finalizar" onclick="finalizarPedido('${id}')">🗑 BORRAR</button>
+                    </div>
+                `;
+                contenedor.appendChild(card);
+            });
+
+            // Sonido solo si entra un pedido totalmente nuevo
+            sonido.play();
+        }
+    });
+
+    function marcarServido(id, cant) {
+        mesasServidas[id] = cant;
+        localStorage.setItem('mesasServidas', JSON.stringify(mesasServidas));
+        // Forzamos actualización visual
+        location.reload(); 
+    }
+
+    function cobrarPedido(id) {
+        if(confirm("¿Se ha cobrado este pedido?")) {
+            eliminarDeLocal(id);
+            db.ref('pedidos/' + id).remove();
+        }
+    }
+
+    function finalizarPedido(id) {
+        if(confirm("¿Eliminar pedido por completo?")) {
+            eliminarDeLocal(id);
+            db.ref('pedidos/' + id).remove();
+        }
+    }
+
+    function eliminarDeLocal(id) {
+        delete mesasServidas[id];
+        localStorage.setItem('mesasServidas', JSON.stringify(mesasServidas));
+    }
+</script>
+</body>
+</html>
