@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocina Mia's Sugar - Force Delete</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --rosa: #ad1457; --fondo: #fce4ec; --verde: #2e7d32; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--fondo); margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .tarjeta { background: white; border-radius: 15px; border-top: 8px solid var(--rosa); box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .t-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; }
+        .t-total { color: var(--verde); font-weight: bold; }
+        .t-cuerpo { padding: 15px; flex-grow: 1; }
+        .btn-cobrar { background: var(--verde); color: white; border: none; padding: 15px; font-weight: bold; cursor: pointer; font-size: 1rem; }
+        .btn-cobrar:active { background: #1b5e20; transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1 style="color: var(--rosa); margin: 0;">👨‍🍳 Panel Cocina</h1>
+    <button onclick="if(confirm('¿Borrar TODO?')) firebase.database().ref('pedidos').remove()" style="background:#c62828; color:white; border:none; padding:10px; border-radius:8px; cursor:pointer; font-weight:bold;">⚠️ LIMPIAR BASE</button>
+</div>
+
+<div id="contenedor" class="grid"></div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // 1. LEER DATOS
+    db.ref('pedidos').on('value', (snapshot) => {
+        const datos = snapshot.val();
+        const cont = document.getElementById('contenedor');
+        cont.innerHTML = "";
+
+        if (!datos) {
+            cont.innerHTML = "<p style='grid-column:1/-1; text-align:center;'>No hay pedidos pendientes.</p>";
+            return;
+        }
+
+        const mesas = {};
+
+        // 2. AGRUPAR
+        Object.keys(datos).forEach(id => {
+            const p = datos[id];
+            // Si el pedido no tiene estado "Cobrado", lo mostramos
+            if (p.estado !== "Cobrado") {
+                const u = p.ubicacion || "Sin Mesa";
+                if (!mesas[u]) { mesas[u] = { prod: [], total: 0, ids: [] }; }
+                mesas[u].prod.push(...p.productos);
+                mesas[u].total += parseFloat(p.total || 0);
+                mesas[u].ids.push(id);
+            }
+        });
+
+        // 3. DIBUJAR
+        Object.keys(mesas).forEach(m => {
+            const div = document.createElement('div');
+            div.className = 'tarjeta';
+            div.innerHTML = `
+                <div class="t-header">
+                    <b style="font-size:1.2rem">${m}</b>
+                    <span class="t-total">${mesas[m].total.toFixed(2)}€</span>
+                </div>
+                <div class="t-cuerpo">
+                    <ul>${mesas[m].prod.map(i => `<li>${i}</li>`).join('')}</ul>
+                </div>
+                <button class="btn-cobrar" onclick="eliminarComanda('${m}', ${JSON.stringify(mesas[m].ids)})">
+                    ✅ COBRAR Y ELIMINAR
+                </button>
+            `;
+            cont.appendChild(div);
+        });
+    });
+
+    // 4. FUNCIÓN DE ELIMINACIÓN REAL
+    function eliminarComanda(nombreMesa, listaIds) {
+        // No preguntamos confirmación para que sea más rápido, o cámbialo si prefieres
+        console.log("Intentando eliminar IDs de la mesa " + nombreMesa, listaIds);
+        
+        listaIds.forEach(idPedido => {
+            // Intentamos DOS caminos: marcar como cobrado Y borrar.
+            // Primero: Borrar físicamente el pedido para que desaparezca SÍ O SÍ
+            db.ref('pedidos/' + idPedido).remove()
+            .then(() => {
+                console.log("Pedido " + idPedido + " borrado con éxito.");
+            })
+            .catch((e) => {
+                console.error("Error al borrar " + idPedido, e);
+            });
+        });
+    }
+</script>
+</body>
+</html>
