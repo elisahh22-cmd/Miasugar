@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mia's Sugar - Carta</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <style>
+        :root { --primario: #ad1457; --secundario: #fce4ec; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #fdf2f8; color: #333; padding-bottom: 120px; }
+        header { background: var(--primario); color: white; padding: 20px; text-align: center; border-radius: 0 0 20px 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .categoria { padding: 15px; font-weight: bold; color: var(--primario); font-size: 1.2em; display: flex; align-items: center; gap: 10px; background: #fce4ec; margin-top: 10px; }
+        .producto { 
+            background: white; margin: 8px 15px; padding: 12px; border-radius: 12px; 
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .info-prod { display: flex; flex-direction: column; }
+        .nombre-prod { font-weight: 600; }
+        .precio-prod { color: var(--primario); font-weight: bold; font-size: 0.9em; }
+        .btn-add { background: var(--primario); color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 1.2em; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        .footer-carrito { 
+            position: fixed; bottom: 0; width: 100%; background: white; 
+            padding: 15px; box-sizing: border-box; box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+            display: flex; flex-direction: column; gap: 10px; border-radius: 20px 20px 0 0; z-index: 1000;
+        }
+        .selector-mesa { padding: 12px; border-radius: 8px; border: 1px solid #ddd; width: 100%; font-size: 1em; background: #fff; }
+        textarea { padding: 10px; border-radius: 8px; border: 1px solid #ddd; width: 100%; box-sizing: border-box; font-family: inherit; resize: none; font-size: 0.9em; }
+        .btn-enviar { background: #2e7d32; color: white; border: none; padding: 14px; border-radius: 10px; font-weight: bold; font-size: 1.1em; cursor: pointer; }
+        .btn-enviar:disabled { background: #ccc; cursor: not-allowed; }
+        .badge { background: var(--primario); color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; margin-left: 5px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Mia's Sugar 🍰</h1>
+    <p>Haz tu pedido desde la mesa</p>
+</header>
+
+<div id="contenedor-carta"></div>
+
+<div class="footer-carrito">
+    <div style="display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 5px;">
+        <span>Items: <span id="cont-items" class="badge">0</span></span>
+        <span>Total: <span id="total-precio">0.00</span>€</span>
+    </div>
+    
+    <select id="mesa-select" class="selector-mesa">
+        <option value="">¿En qué mesa estás?</option>
+        <option value="Mesa 1">Mesa 1</option>
+        <option value="Mesa 2">Mesa 2</option>
+        <option value="Mesa 3">Mesa 3</option>
+        <option value="Mesa 4">Mesa 4</option>
+        <option value="Mesa 5">Mesa 5</option>
+        <option value="Mesa 6">Mesa 6</option>
+        <option value="Mesa 7">Mesa 7</option>
+        <option value="Mesa 8">Mesa 8</option>
+        <option value="Barra">En la Barra</option>
+        <option value="Para Llevar">Para Llevar</option>
+    </select>
+
+    <textarea id="detalles-pedido" rows="2" placeholder="Notas: (Ej. Sin azúcar, leche de soja, muy caliente...)"></textarea>
+
+    <button id="btn-enviar" class="btn-enviar" onclick="enviarPedido()" disabled>ENVIAR PEDIDO</button>
+</div>
+
+<script>
+    const firebaseConfig = { databaseURL: "https://mia-s-sugar-default-rtdb.europe-west1.firebasedatabase.app" };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // CARTA COMPLETA RECUPERADA
+    const carta = [
+        {
+            categoria: "☕ CAFÉS",
+            productos: [
+                { nombre: "Café Solo", precio: 1.20 },
+                { nombre: "Café con Leche", precio: 1.50 },
+                { nombre: "Cortado", precio: 1.30 },
+                { nombre: "Manchado", precio: 1.50 },
+                { nombre: "Café Americano", precio: 1.40 },
+                { nombre: "Capuchino", precio: 2.50 },
+                { nombre: "Capuchino con Nata", precio: 3.00 },
+                { nombre: "Carajillo", precio: 2.00 }
+            ]
+        },
+        {
+            categoria: "🫖 INFUSIONES",
+            productos: [
+                { nombre: "Té Verde", precio: 1.50 },
+                { nombre: "Té Rojo", precio: 1.50 },
+                { nombre: "Manzanilla", precio: 1.30 },
+                { nombre: "Poleo Menta", precio: 1.30 },
+                { nombre: "Té Negro", precio: 1.50 }
+            ]
+        },
+        {
+            categoria: "🍩 BOLLERÍA",
+            productos: [
+                { nombre: "Croissant Clásico", precio: 1.50 },
+                { nombre: "Croissant Chocolate", precio: 1.80 },
+                { nombre: "Napolitana Crema", precio: 1.70 },
+                { nombre: "Gofre Simple", precio: 2.50 },
+                { nombre: "Gofre con Nutella", precio: 3.50 },
+                { nombre: "Tortitas con Nata (3 uds)", precio: 3.80 }
+            ]
+        },
+        {
+            categoria: "🍰 TARTAS CASERAS",
+            productos: [
+                { nombre: "Tarta de Queso", precio: 4.00 },
+                { nombre: "Tarta de Chocolate", precio: 4.00 },
+                { nombre: "Red Velvet", precio: 4.50 },
+                { nombre: "Tarta de Zanahoria", precio: 4.20 }
+            ]
+        },
+        {
+            categoria: "🥤 BEBIDAS Y ZUMOS",
+            productos: [
+                { nombre: "Zumo Naranja Natural", precio: 2.50 },
+                { nombre: "Agua 50cl", precio: 1.20 },
+                { nombre: "Refrescos", precio: 2.00 },
+                { nombre: "Batido de Fresa", precio: 3.50 },
+                { nombre: "Batido de Chocolate", precio: 3.50 }
+            ]
+        }
+    ];
+
+    let carrito = [];
+    let total = 0;
+
+    function renderCarta() {
+        const contenedor = document.getElementById('contenedor-carta');
+        contenedor.innerHTML = "";
+        
+        carta.forEach(cat => {
+            let htmlCat = `<div class="categoria">${cat.categoria}</div>`;
+            cat.productos.forEach(p => {
+                htmlCat += `
+                    <div class="producto">
+                        <div class="info-prod">
+                            <span class="nombre-prod">${p.nombre}</span>
+                            <span class="precio-prod">${p.precio.toFixed(2)}€</span>
+                        </div>
+                        <button class="btn-add" onclick="agregar('${p.nombre}', ${p.precio})">+</button>
+                    </div>
+                `;
+            });
+            contenedor.innerHTML += htmlCat;
+        });
+    }
+
+    function agregar(nombre, precio) {
+        carrito.push(nombre);
+        total += precio;
+        actualizarUI();
+    }
+
+    function actualizarUI() {
+        document.getElementById('cont-items').innerText = carrito.length;
+        document.getElementById('total-precio').innerText = total.toFixed(2);
+        document.getElementById('btn-enviar').disabled = carrito.length === 0;
+    }
+
+    function enviarPedido() {
+        const mesa = document.getElementById('mesa-select').value;
+        const detalles = document.getElementById('detalles-pedido').value;
+
+        if(!mesa) {
+            alert("⚠️ Por favor, selecciona tu mesa antes de enviar.");
+            return;
+        }
+
+        const pedido = {
+            ubicacion: mesa,
+            productos: carrito,
+            detalles: detalles,
+            total: total.toFixed(2),
+            hora: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            estado: "pendiente"
+        };
+
+        const btn = document.getElementById('btn-enviar');
+        btn.innerText = "ENVIANDO...";
+        btn.disabled = true;
+
+        db.ref('pedidos').push(pedido).then(() => {
+            alert("✅ ¡Pedido enviado! En unos minutos te lo llevaremos.");
+            carrito = [];
+            total = 0;
+            document.getElementById('detalles-pedido').value = "";
+            btn.innerText = "ENVIAR PEDIDO";
+            actualizarUI();
+        }).catch(err => {
+            alert("Error al enviar. Revisa tu conexión.");
+            btn.disabled = false;
+            btn.innerText = "ENVIAR PEDIDO";
+        });
+    }
+
+    renderCarta();
+</script>
+</body>
+</html>
